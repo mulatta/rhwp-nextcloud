@@ -45,15 +45,21 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/appinfo/routes.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/AppInfo/Application.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/PageController.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Service/FileResolver.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Service/ResolvedFile.php")
     machine.succeed(f"test -f {quoted_app_path}/templates/index.php")
     machine.succeed(
         "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
     )
     sample_filename = "rhwpviewer-sample.hwp"
+    sample_dirname = "rhwpviewer-sample-dir"
     sample_path = f"/var/lib/nextcloud/data/root/files/{sample_filename}"
+    sample_dir_path = f"/var/lib/nextcloud/data/root/files/{sample_dirname}"
     quoted_sample_path = shlex.quote(sample_path)
+    quoted_sample_dir_path = shlex.quote(sample_dir_path)
     machine.succeed(textwrap.dedent(f"""
         install -d -o nextcloud -g nextcloud /var/lib/nextcloud/data/root/files
+        install -d -o nextcloud -g nextcloud {quoted_sample_dir_path}
         printf '%s\\n' 'rhwpviewer sample file' > {quoted_sample_path}
         chown nextcloud:nextcloud {quoted_sample_path}
         chmod 0640 {quoted_sample_path}
@@ -73,6 +79,7 @@ pkgs.testers.runNixOSTest (_: {
         base = "http://localhost"
         password = "CorrectHorseBatteryStaple42!"
         sample_filename = "rhwpviewer-sample.hwp"
+        sample_dirname = "rhwpviewer-sample-dir"
         cookies = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(cookies)
@@ -143,6 +150,13 @@ pkgs.testers.runNixOSTest (_: {
         assert f'data-file-id="{file_id}"' in html, html[:1000]
         assert file_id in html, html[:1000]
         assert sample_filename in html, html[:1000]
+
+        directory_id = get_file_id(sample_dirname)
+        try:
+            opener.open(base + f"/apps/rhwpviewer/view/{directory_id}")
+            raise AssertionError("directory fileId unexpectedly succeeded")
+        except urllib.error.HTTPError as error:
+            assert error.code == 404, error.code
 
         try:
             opener.open(base + "/apps/rhwpviewer/view/999999999")

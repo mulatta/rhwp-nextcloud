@@ -5,24 +5,21 @@ declare(strict_types=1);
 namespace OCA\RhwpViewer\Controller;
 
 use OCA\RhwpViewer\AppInfo\Application;
+use OCA\RhwpViewer\Service\FileResolver;
+use OCA\RhwpViewer\Service\ResolvedFile;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
-use OCP\Files\File;
-use OCP\Files\IRootFolder;
 use OCP\IRequest;
-use OCP\IUserSession;
-use Throwable;
 
 class PageController extends Controller {
     public function __construct(
         IRequest $request,
         private IInitialState $initialState,
-        private IRootFolder $rootFolder,
-        private IUserSession $userSession,
+        private FileResolver $fileResolver,
     ) {
         parent::__construct(Application::APP_ID, $request);
     }
@@ -48,34 +45,25 @@ class PageController extends Controller {
     #[NoAdminRequired]
     #[NoCSRFRequired]
     public function view(int $fileId): TemplateResponse {
-        if ($fileId <= 0) {
+        $file = $this->fileResolver->resolveForCurrentUser($fileId);
+        if ($file === null) {
             return $this->notFoundResponse();
         }
 
-        $user = $this->userSession->getUser();
-        if ($user === null) {
-            return $this->notFoundResponse();
-        }
+        return $this->renderViewer($this->viewerParamsForFile($file));
+    }
 
-        try {
-            $userFolder = $this->rootFolder->getUserFolder($user->getUID());
-            $nodes = $userFolder->getById($fileId);
-        } catch (Throwable) {
-            return $this->notFoundResponse();
-        }
-
-        $node = $nodes[0] ?? null;
-        if (!$node instanceof File) {
-            return $this->notFoundResponse();
-        }
-
-        return $this->renderViewer([
-            'fileId' => $node->getId(),
-            'fileName' => $node->getName(),
-            'mimeType' => $node->getMimeType(),
-            'size' => $node->getSize(),
+    /**
+     * @return array{fileId: int, fileName: string, mimeType: string, size: int|float, error: null}
+     */
+    private function viewerParamsForFile(ResolvedFile $file): array {
+        return [
+            'fileId' => $file->getId(),
+            'fileName' => $file->getName(),
+            'mimeType' => $file->getMimeType(),
+            'size' => $file->getSize(),
             'error' => null,
-        ]);
+        ];
     }
 
     /**
