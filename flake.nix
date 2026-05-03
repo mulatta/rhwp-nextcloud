@@ -14,7 +14,7 @@
   };
 
   outputs =
-    inputs@{ flake-parts, ... }:
+    inputs@{ self, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
@@ -23,6 +23,12 @@
       ];
 
       imports = [ inputs.treefmt-nix.flakeModule ];
+
+      flake.nixosConfigurations.test = inputs.nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = { inherit self; };
+        modules = [ ./nix/test-vm.nix ];
+      };
 
       perSystem =
         { pkgs, system, ... }:
