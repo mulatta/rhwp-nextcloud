@@ -15,12 +15,14 @@ stdenv.mkDerivation {
 
   dontBuild = true;
 
+  # `services.nextcloud.extraApps` symlinks $out into nix-apps/<appid>, so the
+  # Nextcloud-expected layout (appinfo/, js/, bin/, ...) sits directly at $out.
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/rhwpviewer/{js,bin}
-    cp -r $src/appinfo $out/rhwpviewer/
-    cp -r ${rhwp-studio}/* $out/rhwpviewer/js/
-    cp ${lib.getExe rhwp-cli} $out/rhwpviewer/bin/rhwp
+    mkdir -p $out/{js,bin}
+    cp -r $src/appinfo $out/
+    cp -r ${rhwp-studio}/* $out/js/
+    cp ${lib.getExe rhwp-cli} $out/bin/rhwp
     runHook postInstall
   '';
 
