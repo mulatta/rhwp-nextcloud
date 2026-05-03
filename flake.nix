@@ -7,7 +7,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rhwp-nix.inputs.nixpkgs.follows = "nixpkgs";
-    rhwp-nix.url = "git+file:///Users/seungwon/git/rhwp-nix";
+    rhwp-nix.url = "github:mulatta/rhwp-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     # keep-sorted end
@@ -28,8 +28,8 @@
         { pkgs, system, ... }:
         let
           rhwpPkgs = inputs.rhwp-nix.packages.${system};
-          rhwpviewer = pkgs.callPackage ./packages/rhwpviewer {
-            inherit (rhwpPkgs) studioBundle rhwpCli;
+          rhwp-viewer = pkgs.callPackage ./nix/rhwp-viewer.nix {
+            inherit (rhwpPkgs) rhwp-studio rhwp-cli;
           };
         in
         {
@@ -39,8 +39,8 @@
           };
 
           packages = {
-            inherit rhwpviewer;
-            default = rhwpviewer;
+            inherit rhwp-viewer;
+            default = rhwp-viewer;
           };
 
           devShells.default = pkgs.mkShell { packages = [ ]; };

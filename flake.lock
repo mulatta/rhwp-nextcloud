@@ -68,31 +68,33 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "dirtyRev": "b30f1b0aa1beff37b1b24124b603f2d0a5d9ca3f-dirty",
-        "dirtyShortRev": "b30f1b0-dirty",
-        "lastModified": 1777789959,
-        "narHash": "sha256-XVwQcJWHoOVgZ27bZBqPvUyBEwTrCRb3d5GVqzAab3Y=",
-        "type": "git",
-        "url": "file:///Users/seungwon/git/rhwp-nix"
+        "lastModified": 1777797767,
+        "narHash": "sha256-lxzB9w11AupB8cpFW42f9bpG+8h+WmchQT8s9XhGfvk=",
+        "owner": "mulatta",
+        "repo": "rhwp-nix",
+        "rev": "d0d51162734debb46d19a685b6b20888c496fdfc",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/seungwon/git/rhwp-nix"
+        "owner": "mulatta",
+        "repo": "rhwp-nix",
+        "type": "github"
       }
     },
     "rhwp-src": {
       "flake": false,
       "locked": {
-        "dirtyRev": "42cf91b6ba7b50fa1c853c01158a52ef68b45442-dirty",
-        "dirtyShortRev": "42cf91b-dirty",
-        "lastModified": 1777432138,
-        "narHash": "sha256-/3B3D3j2NWW6bqV174dXhUxhB13hkOJ7D+ae13YqQI8=",
-        "type": "git",
-        "url": "file:///Users/seungwon/git/rhwp"
+        "lastModified": 1777592651,
+        "narHash": "sha256-wS85+CsYZUkRGHlHXUs3KsXLiOkjo4X95cNJyTNEPrE=",
+        "owner": "edwardkim",
+        "repo": "rhwp",
+        "rev": "0fb3e6758b8ad11d2f3c3849c83b914684e83863",
+        "type": "github"
       },
       "original": {
-        "type": "git",
-        "url": "file:///Users/seungwon/git/rhwp"
+        "owner": "edwardkim",
+        "repo": "rhwp",
+        "type": "github"
       }
     },
     "root": {
