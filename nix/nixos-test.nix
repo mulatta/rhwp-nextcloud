@@ -32,7 +32,7 @@ pkgs.testers.runNixOSTest (_: {
     assert status["installed"] is True, status
 
     machine.succeed(
-        "nextcloud-occ app:list | grep -E '^[[:space:]]+- rhwpviewer:'"
+        "nextcloud-occ app:list --enabled | grep -E '^[[:space:]]+- rhwpviewer:'"
     )
     app_path = machine.succeed("nextcloud-occ app:getpath rhwpviewer").strip()
     quoted_app_path = shlex.quote(app_path)
