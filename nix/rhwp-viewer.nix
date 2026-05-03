@@ -21,6 +21,8 @@ stdenv.mkDerivation {
     runHook preInstall
     mkdir -p $out/{js,bin}
     cp -r $src/appinfo $out/
+    cp -r $src/lib $out/
+    cp -r $src/templates $out/
     cp -r ${rhwp-studio}/* $out/js/
     cp ${lib.getExe rhwp-cli} $out/bin/rhwp
     runHook postInstall
