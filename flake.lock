@@ -68,11 +68,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1777797767,
-        "narHash": "sha256-lxzB9w11AupB8cpFW42f9bpG+8h+WmchQT8s9XhGfvk=",
+        "lastModified": 1777808652,
+        "narHash": "sha256-SazntgrFxwt/1L/zXXEQcUpLFEjRSxzq27DNSnFBj+g=",
         "owner": "mulatta",
         "repo": "rhwp-nix",
-        "rev": "d0d51162734debb46d19a685b6b20888c496fdfc",
+        "rev": "432f98be1dbec6961188a694385522bf373009ca",
         "type": "github"
       },
       "original": {
