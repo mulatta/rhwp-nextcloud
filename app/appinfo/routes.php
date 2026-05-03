@@ -7,12 +7,7 @@ namespace OCA\RhwpViewer\AppInfo;
 return [
     'routes' => [
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
-        [
-            'name' => 'page#view',
-            'url' => '/view',
-            'verb' => 'GET',
-            'defaults' => ['fileId' => 0],
-        ],
+        ['name' => 'page#blankView', 'url' => '/view', 'verb' => 'GET'],
         [
             'name' => 'page#view',
             'url' => '/view/{fileId}',
