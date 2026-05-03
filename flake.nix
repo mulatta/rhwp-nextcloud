@@ -49,6 +49,10 @@
             default = rhwp-viewer;
           };
 
+          checks = pkgs.lib.optionalAttrs (system == "x86_64-linux") {
+            nextcloud = import ./nix/nixos-test.nix { inherit self pkgs; };
+          };
+
           devShells.default = pkgs.mkShell { packages = [ ]; };
 
           treefmt = {
