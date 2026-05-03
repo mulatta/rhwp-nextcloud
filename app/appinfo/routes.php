@@ -15,5 +15,11 @@ return [
             'requirements' => ['fileId' => '\\d+'],
             'postfix' => 'with_id',
         ],
+        [
+            'name' => 'conversion#convert',
+            'url' => '/api/files/{fileId}/convert',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+'],
+        ],
     ],
 ];

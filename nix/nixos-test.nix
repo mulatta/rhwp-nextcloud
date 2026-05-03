@@ -70,6 +70,7 @@ pkgs.testers.runNixOSTest (_: {
         python3 - <<'PY'
         import base64
         import http.cookiejar
+        import json
         import re
         import urllib.error
         import urllib.parse
@@ -158,9 +159,24 @@ pkgs.testers.runNixOSTest (_: {
         except urllib.error.HTTPError as error:
             assert error.code == 404, error.code
 
+        response = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/convert")
+        assert response.status == 200, response.status
+        payload = json.loads(response.read().decode("utf-8", "replace"))
+        assert payload["fileId"] == int(file_id), payload
+        assert payload["fileName"] == sample_filename, payload
+        assert payload["status"] == "ok", payload
+        assert payload["kind"] == "smoke", payload
+        assert isinstance(payload["output"], str) and payload["output"] != "", payload
+
         try:
             opener.open(base + "/apps/rhwpviewer/view/999999999")
-            raise AssertionError("bogus fileId unexpectedly succeeded")
+            raise AssertionError("bogus viewer fileId unexpectedly succeeded")
+        except urllib.error.HTTPError as error:
+            assert error.code == 404, error.code
+
+        try:
+            opener.open(base + "/apps/rhwpviewer/api/files/999999999/convert")
+            raise AssertionError("bogus conversion fileId unexpectedly succeeded")
         except urllib.error.HTTPError as error:
             assert error.code == 404, error.code
         PY
