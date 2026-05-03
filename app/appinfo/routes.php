@@ -7,18 +7,19 @@ namespace OCA\RhwpViewer\AppInfo;
 return [
     'routes' => [
         ['name' => 'page#index', 'url' => '/', 'verb' => 'GET'],
-        [
-            'name' => 'page#view',
-            'url' => '/view',
-            'verb' => 'GET',
-            'defaults' => ['fileId' => 0],
-        ],
+        ['name' => 'page#blankView', 'url' => '/view', 'verb' => 'GET'],
         [
             'name' => 'page#view',
             'url' => '/view/{fileId}',
             'verb' => 'GET',
             'requirements' => ['fileId' => '\\d+'],
             'postfix' => 'with_id',
+        ],
+        [
+            'name' => 'conversion#convert',
+            'url' => '/api/files/{fileId}/convert',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+'],
         ],
     ],
 ];
