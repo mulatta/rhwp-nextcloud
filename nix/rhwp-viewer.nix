@@ -24,6 +24,7 @@ stdenv.mkDerivation {
     cp -r $src/lib $out/
     cp -r $src/templates $out/
     cp -r ${rhwp-studio}/* $out/js/
+    cp -r $src/js/. $out/js/
     cp ${lib.getExe rhwp-cli} $out/bin/rhwp
     runHook postInstall
   '';

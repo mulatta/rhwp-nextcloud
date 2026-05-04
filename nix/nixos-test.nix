@@ -53,6 +53,7 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgExportResult.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgPage.php")
     machine.succeed(f"test -f {quoted_app_path}/templates/index.php")
+    machine.succeed(f"test -f {quoted_app_path}/js/viewer.js")
     machine.succeed(
         "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
     )
@@ -144,6 +145,7 @@ pkgs.testers.runNixOSTest (_: {
         assert response.status == 200, response.status
         html = response.read().decode("utf-8", "replace")
         assert "rhwpviewer-root" in html, html[:1000]
+        assert "viewer.js" in html, html[:1000]
         assert "Viewer route is ready" in html, html[:1000]
 
         file_id = get_file_id(sample_filename)
@@ -151,6 +153,8 @@ pkgs.testers.runNixOSTest (_: {
         assert response.status == 200, response.status
         html = response.read().decode("utf-8", "replace")
         assert "rhwpviewer-root" in html, html[:1000]
+        assert "rhwpviewer-pages" in html, html[:1000]
+        assert "viewer.js" in html, html[:1000]
         assert f'data-file-id="{file_id}"' in html, html[:1000]
         assert file_id in html, html[:1000]
         assert sample_filename in html, html[:1000]

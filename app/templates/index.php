@@ -6,6 +6,8 @@ $fileName = $_['fileName'] ?? null;
 $mimeType = $_['mimeType'] ?? null;
 $size = $_['size'] ?? null;
 $error = $_['error'] ?? null;
+
+script('rhwpviewer', 'viewer');
 ?>
 
 <div id="content" class="app-rhwpviewer">
@@ -29,6 +31,7 @@ $error = $_['error'] ?? null;
                     <dd><?php p((string)$size); ?></dd>
                 <?php } ?>
             </dl>
+            <div id="rhwpviewer-pages" aria-live="polite"></div>
         <?php } else { ?>
             <p><?php p($l->t('Viewer route is ready.')); ?></p>
             <p><?php p($l->t('No file selected.')); ?></p>
