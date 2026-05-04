@@ -1,5 +1,8 @@
 { self, pkgs }:
 
+let
+  sampleHwp = ./fixtures/sample.hwp;
+in
 pkgs.testers.runNixOSTest (_: {
   name = "nextcloud-rhwpviewer";
 
@@ -47,11 +50,13 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/PageController.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/FileResolver.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/ResolvedFile.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgExportResult.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgPage.php")
     machine.succeed(f"test -f {quoted_app_path}/templates/index.php")
     machine.succeed(
         "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
     )
-    sample_filename = "rhwpviewer-sample.hwp"
+    sample_filename = "한글 제목 샘플.hwp"
     sample_dirname = "rhwpviewer-sample-dir"
     sample_path = f"/var/lib/nextcloud/data/root/files/{sample_filename}"
     sample_dir_path = f"/var/lib/nextcloud/data/root/files/{sample_dirname}"
@@ -60,9 +65,7 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(textwrap.dedent(f"""
         install -d -o nextcloud -g nextcloud /var/lib/nextcloud/data/root/files
         install -d -o nextcloud -g nextcloud {quoted_sample_dir_path}
-        printf '%s\\n' 'rhwpviewer sample file' > {quoted_sample_path}
-        chown nextcloud:nextcloud {quoted_sample_path}
-        chmod 0640 {quoted_sample_path}
+        install -o nextcloud -g nextcloud -m 0640 ${sampleHwp} {quoted_sample_path}
         nextcloud-occ files:scan root
     """))
 
@@ -79,7 +82,7 @@ pkgs.testers.runNixOSTest (_: {
 
         base = "http://localhost"
         password = "CorrectHorseBatteryStaple42!"
-        sample_filename = "rhwpviewer-sample.hwp"
+        sample_filename = "한글 제목 샘플.hwp"
         sample_dirname = "rhwpviewer-sample-dir"
         cookies = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(
@@ -165,8 +168,21 @@ pkgs.testers.runNixOSTest (_: {
         assert payload["fileId"] == int(file_id), payload
         assert payload["fileName"] == sample_filename, payload
         assert payload["status"] == "ok", payload
-        assert payload["kind"] == "smoke", payload
-        assert isinstance(payload["output"], str) and payload["output"] != "", payload
+        assert payload["kind"] == "svg", payload
+        assert isinstance(payload["pages"], list) and len(payload["pages"]) >= 1, payload
+        first_page = payload["pages"][0]
+        assert first_page["index"] == 0, payload
+        assert isinstance(first_page["bytes"], int) and first_page["bytes"] > 0, payload
+        assert first_page["url"].startswith(f"/apps/rhwpviewer/api/files/{file_id}/pages/"), payload
+        assert first_page["url"].endswith(".svg"), payload
+        assert sample_filename not in first_page["url"], payload
+        assert "한글" not in first_page["url"], payload
+
+        page_response = opener.open(base + first_page["url"])
+        assert page_response.status == 200, page_response.status
+        assert page_response.headers.get_content_type() == "image/svg+xml", page_response.headers
+        svg = page_response.read().decode("utf-8", "replace")
+        assert "<svg" in svg[:1000], svg[:1000]
 
         try:
             opener.open(base + "/apps/rhwpviewer/view/999999999")
@@ -177,6 +193,12 @@ pkgs.testers.runNixOSTest (_: {
         try:
             opener.open(base + "/apps/rhwpviewer/api/files/999999999/convert")
             raise AssertionError("bogus conversion fileId unexpectedly succeeded")
+        except urllib.error.HTTPError as error:
+            assert error.code == 404, error.code
+
+        try:
+            opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/pages/999999.svg")
+            raise AssertionError("bogus page unexpectedly succeeded")
         except urllib.error.HTTPError as error:
             assert error.code == 404, error.code
         PY

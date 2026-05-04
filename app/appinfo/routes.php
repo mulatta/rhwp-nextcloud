@@ -21,5 +21,11 @@ return [
             'verb' => 'GET',
             'requirements' => ['fileId' => '\\d+'],
         ],
+        [
+            'name' => 'conversion#page',
+            'url' => '/api/files/{fileId}/pages/{page}.svg',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+', 'page' => '\\d+'],
+        ],
     ],
 ];

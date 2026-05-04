@@ -6,19 +6,18 @@ namespace OCA\RhwpViewer\Controller;
 
 use OCA\RhwpViewer\AppInfo\Application;
 use OCA\RhwpViewer\Service\ConversionFailed;
-use OCA\RhwpViewer\Service\ConversionResult;
 use OCA\RhwpViewer\Service\FileResolver;
 use OCA\RhwpViewer\Service\RhwpConverter;
+use OCA\RhwpViewer\Service\SvgExportResult;
 use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\DataDisplayResponse;
 use OCP\AppFramework\Http\JSONResponse;
 use OCP\IRequest;
 
 class ConversionController extends Controller {
-    private const MAX_OUTPUT_BYTES = 8192;
-
     public function __construct(
         IRequest $request,
         private FileResolver $fileResolver,
@@ -32,14 +31,20 @@ class ConversionController extends Controller {
     public function convert(int $fileId): JSONResponse {
         $file = $this->fileResolver->resolveForCurrentUser($fileId);
         if ($file === null) {
-            return new JSONResponse([
-                'status' => 'error',
-                'error' => 'File not found.',
-            ], Http::STATUS_NOT_FOUND);
+            return $this->notFoundResponse();
         }
 
+        $result = null;
         try {
-            $result = $this->converter->smokeTest();
+            $result = $this->converter->exportSvg($file);
+
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'ok',
+                'kind' => 'svg',
+                'pages' => $this->manifestPages($file->getId(), $result),
+            ]);
         } catch (ConversionFailed $error) {
             return new JSONResponse([
                 'fileId' => $file->getId(),
@@ -47,21 +52,71 @@ class ConversionController extends Controller {
                 'status' => 'error',
                 'error' => $this->userMessageForFailure($error),
             ], $this->statusForFailure($error));
+        } finally {
+            if ($result !== null) {
+                $result->cleanup();
+            }
+        }
+    }
+
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function page(int $fileId, int $page): JSONResponse|DataDisplayResponse {
+        $file = $this->fileResolver->resolveForCurrentUser($fileId);
+        if ($file === null) {
+            return $this->notFoundResponse();
         }
 
-        return new JSONResponse([
-            'fileId' => $file->getId(),
-            'fileName' => $file->getName(),
-            'status' => 'ok',
-            'kind' => $this->kindForResult($result),
-            'output' => $this->outputForResult($result),
-        ]);
+        $result = null;
+        try {
+            $result = $this->converter->exportSvg($file);
+            $svgPage = $result->getPage($page);
+            if ($svgPage === null) {
+                return $this->notFoundResponse();
+            }
+
+            $response = new DataDisplayResponse($svgPage->getContent(), Http::STATUS_OK, [
+                'Content-Length' => (string)$svgPage->getBytes(),
+                'Content-Type' => 'image/svg+xml; charset=utf-8',
+            ]);
+            $response->addHeader('Content-Disposition', sprintf('inline; filename="page-%d.svg"', $page));
+
+            return $response;
+        } catch (ConversionFailed $error) {
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'error',
+                'error' => $this->userMessageForFailure($error),
+            ], $this->statusForFailure($error));
+        } finally {
+            if ($result !== null) {
+                $result->cleanup();
+            }
+        }
+    }
+
+    /**
+     * @return list<array{index: int, url: string, bytes: int}>
+     */
+    private function manifestPages(int $fileId, SvgExportResult $result): array {
+        $pages = [];
+        foreach ($result->getPages() as $page) {
+            $pages[] = [
+                'index' => $page->getIndex(),
+                'url' => sprintf('/apps/%s/api/files/%d/pages/%d.svg', Application::APP_ID, $fileId, $page->getIndex()),
+                'bytes' => $page->getBytes(),
+            ];
+        }
+
+        return $pages;
     }
 
     private function statusForFailure(ConversionFailed $error): int {
         return match ($error->getReason()) {
             ConversionFailed::REASON_TIMEOUT => Http::STATUS_GATEWAY_TIMEOUT,
-            ConversionFailed::REASON_NON_ZERO_EXIT => Http::STATUS_BAD_GATEWAY,
+            ConversionFailed::REASON_NON_ZERO_EXIT,
+            ConversionFailed::REASON_NO_OUTPUT => Http::STATUS_BAD_GATEWAY,
             default => Http::STATUS_INTERNAL_SERVER_ERROR,
         };
     }
@@ -74,28 +129,10 @@ class ConversionController extends Controller {
         };
     }
 
-    private function kindForResult(ConversionResult $result): string {
-        if ($result->getOperation() === 'smoke-test') {
-            return 'smoke';
-        }
-
-        return $result->getOperation();
-    }
-
-    private function outputForResult(ConversionResult $result): string {
-        $output = trim($result->getStdout()) !== '' ? $result->getStdout() : $result->getStderr();
-
-        return $this->sanitizeOutput($output);
-    }
-
-    private function sanitizeOutput(string $output): string {
-        $output = preg_replace('/\/nix\/store\/[a-z0-9]{32}-[^\s\'"<>]+/', '[store-path]', $output) ?? $output;
-        $output = trim(str_replace(["\r\n", "\r"], "\n", $output));
-
-        if (strlen($output) > self::MAX_OUTPUT_BYTES) {
-            return substr($output, 0, self::MAX_OUTPUT_BYTES) . "\n[truncated]";
-        }
-
-        return $output;
+    private function notFoundResponse(): JSONResponse {
+        return new JSONResponse([
+            'status' => 'error',
+            'error' => 'File not found.',
+        ], Http::STATUS_NOT_FOUND);
     }
 }
