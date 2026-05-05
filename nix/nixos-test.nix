@@ -169,6 +169,7 @@ pkgs.testers.runNixOSTest (_: {
         assert "Open in RHWP Studio" in action_js, action_js[:1000]
         assert "Edit with RHWP" not in action_js, action_js[:1000]
         assert "/apps/rhwpviewer/edit/" in action_js, action_js[:1000]
+        assert "default" in action_js, action_js[:1000]
 
         def check_editor(filename):
             file_id = get_file_id(filename)

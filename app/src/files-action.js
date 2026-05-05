@@ -1,4 +1,4 @@
-import { FileType, Permission, registerFileAction } from '@nextcloud/files'
+import { DefaultType, FileType, Permission, registerFileAction } from '@nextcloud/files'
 import { t } from '@nextcloud/l10n'
 import { generateUrl } from '@nextcloud/router'
 
@@ -66,6 +66,7 @@ function isSupportedNode(node) {
 registerFileAction({
     id: 'rhwpviewer-open',
     order: 20,
+    default: DefaultType.DEFAULT,
     displayName: () => t(APP_ID, 'Open in RHWP Studio'),
     iconSvgInline: iconSvg,
     enabled: ({ nodes }) => nodes.length === 1 && isSupportedNode(nodes[0]),
