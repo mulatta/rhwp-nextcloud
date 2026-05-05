@@ -16,6 +16,24 @@ return [
             'postfix' => 'with_id',
         ],
         [
+            'name' => 'page#edit',
+            'url' => '/edit/{fileId}',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+'],
+        ],
+        [
+            'name' => 'document#studio',
+            'url' => '/studio/{fileId}',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+'],
+        ],
+        [
+            'name' => 'document#content',
+            'url' => '/api/files/{fileId}/content',
+            'verb' => 'GET',
+            'requirements' => ['fileId' => '\\d+'],
+        ],
+        [
             'name' => 'conversion#convert',
             'url' => '/api/files/{fileId}/convert',
             'verb' => 'GET',

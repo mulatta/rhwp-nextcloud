@@ -49,12 +49,14 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/appinfo/routes.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/AppInfo/Application.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/PageController.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Controller/DocumentController.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Listener/LoadFilesActionScript.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/FileResolver.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/ResolvedFile.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgExportResult.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgPage.php")
     machine.succeed(f"test -f {quoted_app_path}/templates/index.php")
+    machine.succeed(f"test -f {quoted_app_path}/js/index.html")
     machine.succeed(f"test -f {quoted_app_path}/js/viewer.js")
     machine.succeed(f"test -f {quoted_app_path}/js/files-action.js")
     machine.succeed(
@@ -161,6 +163,43 @@ pkgs.testers.runNixOSTest (_: {
         html = response.read().decode("utf-8", "replace")
         assert "files-action.js" in html, html[:1000]
 
+        def check_editor(filename):
+            file_id = get_file_id(filename)
+            response = opener.open(base + f"/apps/rhwpviewer/edit/{file_id}")
+            assert response.status == 200, response.status
+            assert response.geturl().startswith(base + f"/apps/rhwpviewer/studio/{file_id}"), response.geturl()
+            decoded_editor_url = urllib.parse.unquote(response.geturl())
+            assert f"/apps/rhwpviewer/api/files/{file_id}/content" in decoded_editor_url, decoded_editor_url
+            assert "document.hwp" in decoded_editor_url or "document.hwpx" in decoded_editor_url, decoded_editor_url
+            assert "한글" not in decoded_editor_url, decoded_editor_url
+            studio_html = response.read().decode("utf-8", "replace")
+
+            content_response = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/content")
+            assert content_response.status == 200, content_response.status
+            assert content_response.headers.get_content_type() == "application/octet-stream", content_response.headers
+            content = content_response.read(8)
+            assert content.startswith(b"\xd0\xcf\x11\xe0") or content.startswith(b"PK"), content
+
+            assert "wasm-unsafe-eval" in response.headers.get("Content-Security-Policy", ""), response.headers
+            assert "rhwp-studio" in studio_html, studio_html[:1000]
+            script_match = re.search(r'<script\b([^>]+)src="([^"]+)"', studio_html)
+            assert script_match, studio_html[:1000]
+            assert "nonce=" in script_match.group(1), script_match.group(0)
+            script_src = script_match.group(2)
+            assert script_src.startswith("/nix-apps/rhwpviewer/js/assets/"), studio_html[:1000]
+            assert 'src="/assets/' not in studio_html, studio_html[:1000]
+            assert 'href="/assets/' not in studio_html, studio_html[:1000]
+            assert "registerSW.js" not in studio_html, studio_html[:1000]
+
+            asset_response = opener.open(base + script_src)
+            assert asset_response.status == 200, asset_response.status
+            assert asset_response.headers.get_content_type() == "text/javascript", asset_response.headers
+            asset_js = asset_response.read().decode("utf-8", "replace")
+            assert "new URL(`./rhwp_bg" in asset_js, asset_js[:1000]
+            assert "new URL(`/apps/rhwpviewer" not in asset_js, asset_js[:1000]
+            assert "file:`/apps/rhwpviewer" not in asset_js, asset_js[:1000]
+            return file_id
+
         def check_svg_export(filename):
             file_id = get_file_id(filename)
             response = opener.open(base + f"/apps/rhwpviewer/view/{file_id}")
@@ -198,6 +237,8 @@ pkgs.testers.runNixOSTest (_: {
 
         file_id = check_svg_export(sample_filename)
         check_svg_export(sample_hwpx_filename)
+        check_editor(sample_filename)
+        check_editor(sample_hwpx_filename)
 
         directory_id = get_file_id(sample_dirname)
         try:

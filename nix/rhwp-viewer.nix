@@ -51,6 +51,10 @@ stdenv.mkDerivation {
     cp -r $src/lib $out/
     cp -r $src/templates $out/
     cp -r ${rhwp-studio}/* $out/js/
+    substituteInPlace $out/js/assets/*.js \
+      --replace-fail 'new URL(`/assets/' 'new URL(`./'
+    substituteInPlace $out/js/assets/*.css \
+      --replace-fail 'url(/images/' 'url(../images/'
     cp -r $src/js/. $out/js/
     cp ${filesAction}/files-action.js $out/js/files-action.js
     cp ${lib.getExe rhwp-cli} $out/bin/rhwp

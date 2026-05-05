@@ -66,7 +66,7 @@ function isSupportedNode(node) {
 registerFileAction({
     id: 'rhwpviewer-open',
     order: 20,
-    displayName: () => t(APP_ID, 'Open with RHWP Viewer'),
+    displayName: () => t(APP_ID, 'Edit with RHWP'),
     iconSvgInline: iconSvg,
     enabled: ({ nodes }) => nodes.length === 1 && isSupportedNode(nodes[0]),
     exec: async ({ nodes }) => {
@@ -75,7 +75,7 @@ registerFileAction({
             return false
         }
 
-        window.location.href = generateUrl('/apps/rhwpviewer/view/{fileId}', { fileId })
+        window.location.href = generateUrl('/apps/rhwpviewer/edit/{fileId}', { fileId })
         return null
     },
 })

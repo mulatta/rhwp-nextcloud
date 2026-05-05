@@ -11,15 +11,18 @@ use OCP\AppFramework\Controller;
 use OCP\AppFramework\Http;
 use OCP\AppFramework\Http\Attribute\NoAdminRequired;
 use OCP\AppFramework\Http\Attribute\NoCSRFRequired;
+use OCP\AppFramework\Http\RedirectResponse;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\AppFramework\Services\IInitialState;
 use OCP\IRequest;
+use OCP\IURLGenerator;
 
 class PageController extends Controller {
     public function __construct(
         IRequest $request,
         private IInitialState $initialState,
         private FileResolver $fileResolver,
+        private IURLGenerator $urlGenerator,
     ) {
         parent::__construct(Application::APP_ID, $request);
     }
@@ -53,6 +56,35 @@ class PageController extends Controller {
         return $this->renderViewer($this->viewerParamsForFile($file));
     }
 
+    #[NoAdminRequired]
+    #[NoCSRFRequired]
+    public function edit(int $fileId): TemplateResponse|RedirectResponse {
+        $file = $this->fileResolver->resolveForCurrentUser($fileId);
+        if ($file === null) {
+            return $this->notFoundResponse();
+        }
+
+        $safeFilename = $this->safeDocumentFilename($file);
+        if ($safeFilename === null) {
+            return $this->renderViewer([
+                ...$this->viewerParamsForFile($file),
+                'error' => 'Unsupported document type.',
+            ], Http::STATUS_UNSUPPORTED_MEDIA_TYPE);
+        }
+
+        $contentUrl = $this->urlGenerator->linkToRoute('rhwpviewer.document.content', [
+            'fileId' => $file->getId(),
+        ]);
+        $studioUrl = $this->urlGenerator->linkToRoute('rhwpviewer.document.studio', [
+            'fileId' => $file->getId(),
+        ]) . '?' . http_build_query([
+            'url' => $contentUrl,
+            'filename' => $safeFilename,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        return new RedirectResponse($studioUrl);
+    }
+
     /**
      * @return array{fileId: int, fileName: string, mimeType: string, size: int|float, error: null}
      */
@@ -79,6 +111,15 @@ class PageController extends Controller {
             TemplateResponse::RENDER_AS_USER,
             $status,
         );
+    }
+
+    private function safeDocumentFilename(ResolvedFile $file): ?string {
+        $extension = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
+        if (!in_array($extension, ['hwp', 'hwpx'], true)) {
+            return null;
+        }
+
+        return 'document.' . $extension;
     }
 
     private function notFoundResponse(): TemplateResponse {
