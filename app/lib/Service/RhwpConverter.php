@@ -18,21 +18,116 @@ final class RhwpConverter {
     /**
      * @throws ConversionFailed
      */
-    public function smokeTest(): ConversionResult {
-        $result = $this->run([$this->getCliPath(), '--help']);
+    public function exportSvg(ResolvedFile $file): SvgExportResult {
+        $workDir = $this->createWorkDir();
+        $outputDir = $workDir . DIRECTORY_SEPARATOR . 'output';
+        $inputName = 'input' . $this->documentSuffix($file);
+        $inputPath = $workDir . DIRECTORY_SEPARATOR . $inputName;
 
-        return ConversionResult::smokeTest(
-            $result['stdout'],
-            $result['stderr'],
-            $result['exitCode'],
-        );
+        try {
+            if (!mkdir($outputDir, 0700)) {
+                throw ConversionFailed::executionError('Failed to create RHWP output directory.');
+            }
+
+            $this->copyInputFile($file, $inputPath);
+
+            $result = $this->run(
+                [$this->getCliPath(), 'export-svg', $inputName, '-o', 'output/'],
+                $workDir,
+            );
+
+            $pages = $this->scanSvgPages($outputDir);
+            if ($pages === []) {
+                throw ConversionFailed::noOutput($result['stdout'], $result['stderr']);
+            }
+
+            return new SvgExportResult($workDir, $pages);
+        } catch (ConversionFailed $error) {
+            $this->removeTree($workDir);
+            throw $error;
+        } catch (Throwable $throwable) {
+            $this->removeTree($workDir);
+            throw ConversionFailed::executionError('Failed to export SVG pages.', $throwable);
+        }
+    }
+
+    /**
+     * @throws ConversionFailed
+     */
+    private function documentSuffix(ResolvedFile $file): string {
+        $extension = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'hwp' => '.hwp',
+            'hwpx' => '.hwpx',
+            default => throw ConversionFailed::unsupportedDocument($file->getName()),
+        };
+    }
+
+    /**
+     * @throws ConversionFailed
+     */
+    private function copyInputFile(ResolvedFile $file, string $inputPath): void {
+        $source = null;
+        $target = null;
+
+        try {
+            $source = $file->getFile()->fopen('rb');
+            if ($source === false) {
+                throw ConversionFailed::executionError('Failed to open source file.');
+            }
+
+            $target = fopen($inputPath, 'wb');
+            if ($target === false) {
+                throw ConversionFailed::executionError('Failed to create RHWP input file.');
+            }
+
+            if (stream_copy_to_stream($source, $target) === false) {
+                throw ConversionFailed::executionError('Failed to copy source file for conversion.');
+            }
+        } finally {
+            if (is_resource($source)) {
+                fclose($source);
+            }
+            if (is_resource($target)) {
+                fclose($target);
+            }
+        }
+    }
+
+    /**
+     * @return list<SvgPage>
+     */
+    private function scanSvgPages(string $outputDir): array {
+        $paths = glob($outputDir . DIRECTORY_SEPARATOR . '*.svg');
+        if ($paths === false) {
+            return [];
+        }
+
+        sort($paths, SORT_STRING);
+
+        $pages = [];
+        foreach ($paths as $path) {
+            if (!is_file($path)) {
+                continue;
+            }
+
+            $bytes = filesize($path);
+            if ($bytes === false) {
+                continue;
+            }
+
+            $pages[] = new SvgPage(count($pages), $path, $bytes);
+        }
+
+        return $pages;
     }
 
     /**
      * @return array{stdout: string, stderr: string, exitCode: int}
      * @throws ConversionFailed
      */
-    private function run(array $command): array {
+    private function run(array $command, string $cwd): array {
         if ($this->timeoutSeconds <= 0.0) {
             throw ConversionFailed::executionError('RHWP timeout must be greater than zero.');
         }
@@ -48,7 +143,7 @@ final class RhwpConverter {
                 $command,
                 $descriptors,
                 $pipes,
-                $this->getAppPath(),
+                $cwd,
                 null,
                 ['bypass_shell' => true],
             );
@@ -155,5 +250,49 @@ final class RhwpConverter {
         } catch (Throwable $throwable) {
             throw ConversionFailed::executionError('Failed to resolve RHWP app path.', $throwable);
         }
+    }
+
+    /**
+     * @throws ConversionFailed
+     */
+    private function createWorkDir(): string {
+        $baseDir = rtrim(sys_get_temp_dir(), DIRECTORY_SEPARATOR);
+
+        try {
+            for ($attempt = 0; $attempt < 10; $attempt++) {
+                $path = $baseDir . DIRECTORY_SEPARATOR . 'rhwpviewer-' . bin2hex(random_bytes(8));
+                if (mkdir($path, 0700)) {
+                    return $path;
+                }
+            }
+        } catch (Throwable $throwable) {
+            throw ConversionFailed::executionError('Failed to create RHWP work directory.', $throwable);
+        }
+
+        throw ConversionFailed::executionError('Failed to create RHWP work directory.');
+    }
+
+    private function removeTree(string $path): void {
+        if (is_file($path) || is_link($path)) {
+            @unlink($path);
+            return;
+        }
+
+        if (!is_dir($path)) {
+            return;
+        }
+
+        $entries = scandir($path);
+        if ($entries !== false) {
+            foreach ($entries as $entry) {
+                if ($entry === '.' || $entry === '..') {
+                    continue;
+                }
+
+                $this->removeTree($path . DIRECTORY_SEPARATOR . $entry);
+            }
+        }
+
+        @rmdir($path);
     }
 }

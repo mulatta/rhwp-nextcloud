@@ -10,6 +10,8 @@ use Throwable;
 final class ConversionFailed extends RuntimeException {
     public const REASON_MISSING_EXECUTABLE = 'missing_executable';
     public const REASON_NON_ZERO_EXIT = 'non_zero_exit';
+    public const REASON_NO_OUTPUT = 'no_output';
+    public const REASON_UNSUPPORTED_DOCUMENT = 'unsupported_document';
     public const REASON_TIMEOUT = 'timeout';
     public const REASON_EXECUTION_ERROR = 'execution_error';
 
@@ -48,6 +50,23 @@ final class ConversionFailed extends RuntimeException {
             null,
             $stdout,
             $stderr,
+        );
+    }
+
+    public static function noOutput(string $stdout, string $stderr): self {
+        return new self(
+            self::REASON_NO_OUTPUT,
+            'RHWP did not produce any SVG pages.',
+            null,
+            $stdout,
+            $stderr,
+        );
+    }
+
+    public static function unsupportedDocument(string $name): self {
+        return new self(
+            self::REASON_UNSUPPORTED_DOCUMENT,
+            sprintf('Unsupported RHWP document type: %s', $name),
         );
     }
 
