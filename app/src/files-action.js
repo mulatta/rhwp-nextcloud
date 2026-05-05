@@ -66,7 +66,7 @@ function isSupportedNode(node) {
 registerFileAction({
     id: 'rhwpviewer-open',
     order: 20,
-    displayName: () => t(APP_ID, 'Edit with RHWP'),
+    displayName: () => t(APP_ID, 'Open in RHWP Studio'),
     iconSvgInline: iconSvg,
     enabled: ({ nodes }) => nodes.length === 1 && isSupportedNode(nodes[0]),
     exec: async ({ nodes }) => {

@@ -39,14 +39,14 @@ pkgs.testers.runNixOSTest (_: {
     status = json.loads(status_raw)
     assert status["installed"] is True, status
 
-    machine.succeed(
-        "nextcloud-occ app:list --enabled | grep -E '^[[:space:]]+- rhwpviewer:'"
-    )
+    enabled_apps = machine.succeed("nextcloud-occ app:list --enabled")
+    assert "- rhwpviewer: 0.1.0" in enabled_apps, enabled_apps
     app_path = machine.succeed("nextcloud-occ app:getpath rhwpviewer").strip()
     quoted_app_path = shlex.quote(app_path)
     machine.succeed(f"test -x {quoted_app_path}/bin/rhwp")
     machine.succeed(f"{quoted_app_path}/bin/rhwp --help >/dev/null")
     machine.succeed(f"test -f {quoted_app_path}/appinfo/routes.php")
+    machine.succeed("grep -q 'RHWP Studio' " + quoted_app_path + "/appinfo/info.xml")
     machine.succeed(f"test -f {quoted_app_path}/lib/AppInfo/Application.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/PageController.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/DocumentController.php")
@@ -162,6 +162,13 @@ pkgs.testers.runNixOSTest (_: {
         assert response.status == 200, response.status
         html = response.read().decode("utf-8", "replace")
         assert "files-action.js" in html, html[:1000]
+        action_script = re.search(r'src="([^"]*files-action\.js[^"]*)"', html)
+        assert action_script, html[:1000]
+        action_response = opener.open(base + action_script.group(1))
+        action_js = action_response.read().decode("utf-8", "replace")
+        assert "Open in RHWP Studio" in action_js, action_js[:1000]
+        assert "Edit with RHWP" not in action_js, action_js[:1000]
+        assert "/apps/rhwpviewer/edit/" in action_js, action_js[:1000]
 
         def check_editor(filename):
             file_id = get_file_id(filename)
