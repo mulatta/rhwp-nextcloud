@@ -49,12 +49,14 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/appinfo/routes.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/AppInfo/Application.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Controller/PageController.php")
+    machine.succeed(f"test -f {quoted_app_path}/lib/Listener/LoadFilesActionScript.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/FileResolver.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/ResolvedFile.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgExportResult.php")
     machine.succeed(f"test -f {quoted_app_path}/lib/Service/SvgPage.php")
     machine.succeed(f"test -f {quoted_app_path}/templates/index.php")
     machine.succeed(f"test -f {quoted_app_path}/js/viewer.js")
+    machine.succeed(f"test -f {quoted_app_path}/js/files-action.js")
     machine.succeed(
         "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
     )
@@ -153,6 +155,11 @@ pkgs.testers.runNixOSTest (_: {
         assert "rhwpviewer-root" in html, html[:1000]
         assert "viewer.js" in html, html[:1000]
         assert "Viewer route is ready" in html, html[:1000]
+
+        response = opener.open(base + "/apps/files/")
+        assert response.status == 200, response.status
+        html = response.read().decode("utf-8", "replace")
+        assert "files-action.js" in html, html[:1000]
 
         def check_svg_export(filename):
             file_id = get_file_id(filename)
