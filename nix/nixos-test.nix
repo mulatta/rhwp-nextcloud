@@ -185,11 +185,32 @@ pkgs.testers.runNixOSTest (_: {
             content_response = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/content")
             assert content_response.status == 200, content_response.status
             assert content_response.headers.get_content_type() == "application/octet-stream", content_response.headers
-            content = content_response.read(8)
-            assert content.startswith(b"\xd0\xcf\x11\xe0") or content.startswith(b"PK"), content
+            content = content_response.read()
+            assert content.startswith(b"\xd0\xcf\x11\xe0") or content.startswith(b"PK"), content[:8]
 
             assert "wasm-unsafe-eval" in response.headers.get("Content-Security-Policy", ""), response.headers
             assert "rhwp-studio" in studio_html, studio_html[:1000]
+            assert f"/apps/rhwpviewer/api/files/{file_id}/content" in studio_html, studio_html[:1000]
+            assert "showSaveFilePicker" in studio_html, studio_html[:1000]
+            token_match = re.search(r'const requestToken = "([^"]+)";', studio_html)
+            assert token_match, studio_html[:1000]
+            save_request = urllib.request.Request(
+                base + f"/apps/rhwpviewer/api/files/{file_id}/content",
+                data=content,
+                headers={
+                    "Content-Type": "application/octet-stream",
+                    "requesttoken": token_match.group(1),
+                },
+                method="PUT",
+            )
+            save_response = opener.open(save_request)
+            assert save_response.status == 200, save_response.status
+            save_payload = json.loads(save_response.read().decode("utf-8", "replace"))
+            assert save_payload["status"] == "ok", save_payload
+            assert save_payload["fileId"] == int(file_id), save_payload
+            assert save_payload["bytes"] == len(content), save_payload
+            saved_content = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/content").read()
+            assert saved_content == content, len(saved_content)
             script_match = re.search(r'<script\b([^>]+)src="([^"]+)"', studio_html)
             assert script_match, studio_html[:1000]
             assert "nonce=" in script_match.group(1), script_match.group(0)

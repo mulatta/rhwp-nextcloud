@@ -34,6 +34,12 @@ return [
             'requirements' => ['fileId' => '\\d+'],
         ],
         [
+            'name' => 'document#saveContent',
+            'url' => '/api/files/{fileId}/content',
+            'verb' => 'PUT',
+            'requirements' => ['fileId' => '\\d+'],
+        ],
+        [
             'name' => 'conversion#convert',
             'url' => '/api/files/{fileId}/convert',
             'verb' => 'GET',

@@ -39,7 +39,7 @@ class DocumentController extends Controller {
             return $this->unsupportedResponse($file);
         }
 
-        $html = $this->studioHtml();
+        $html = $this->studioHtml($file);
         if ($html === null) {
             return new JSONResponse([
                 'status' => 'error',
@@ -90,7 +90,67 @@ class DocumentController extends Controller {
         return $response;
     }
 
-    private function studioHtml(): ?string {
+    #[NoAdminRequired]
+    public function saveContent(int $fileId): JSONResponse {
+        $file = $this->fileResolver->resolveForCurrentUser($fileId);
+        if ($file === null) {
+            return $this->notFoundResponse();
+        }
+
+        if ($this->safeDocumentFilename($file) === null) {
+            return $this->unsupportedResponse($file);
+        }
+
+        $node = $file->getFile();
+        try {
+            if (!$node->isUpdateable()) {
+                return new JSONResponse([
+                    'fileId' => $file->getId(),
+                    'fileName' => $file->getName(),
+                    'status' => 'error',
+                    'error' => 'File is not writable.',
+                ], Http::STATUS_FORBIDDEN);
+            }
+        } catch (Throwable) {
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'error',
+                'error' => 'File permissions are unavailable.',
+            ], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+
+        $content = file_get_contents('php://input');
+        if ($content === false || $content === '') {
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'error',
+                'error' => 'Save payload is empty.',
+            ], Http::STATUS_BAD_REQUEST);
+        }
+
+        try {
+            $node->putContent($content);
+
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'ok',
+                'bytes' => strlen($content),
+                'etag' => $node->getEtag(),
+            ]);
+        } catch (Throwable) {
+            return new JSONResponse([
+                'fileId' => $file->getId(),
+                'fileName' => $file->getName(),
+                'status' => 'error',
+                'error' => 'File could not be saved.',
+            ], Http::STATUS_INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private function studioHtml(ResolvedFile $file): ?string {
         $html = @file_get_contents(dirname(__DIR__, 2) . '/js/index.html');
         if ($html === false) {
             return null;
@@ -100,9 +160,15 @@ class DocumentController extends Controller {
         $escapedAssetRoot = htmlspecialchars($assetRoot, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $nonce = \OC::$server->getContentSecurityPolicyNonceManager()->getNonce();
         $escapedNonce = htmlspecialchars($nonce, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $saveUrl = $this->urlGenerator->linkToRoute('rhwpviewer.document.saveContent', [
+            'fileId' => $file->getId(),
+        ]);
+        $requestToken = \OC::$server->getCsrfTokenManager()->getToken()->getEncryptedValue();
+        $safeFilename = $this->safeDocumentFilename($file) ?? 'document.hwp';
+        $saveBridge = $this->saveBridgeScript($saveUrl, $requestToken, $safeFilename);
 
         $html = preg_replace('#<link rel="manifest"[^>]*><script id="vite-plugin-pwa:register-sw"[^>]*></script>#', '', $html) ?? $html;
-        $html = str_replace('<head>', '<head><base href="' . $escapedAssetRoot . '/">', $html);
+        $html = str_replace('<head>', '<head><base href="' . $escapedAssetRoot . '/"><script nonce="' . $escapedNonce . '">' . $saveBridge . '</script>', $html);
         $html = str_replace('href="/favicon.ico"', 'href="' . $escapedAssetRoot . '/favicon.ico"', $html);
         $html = str_replace('href="/icons/', 'href="' . $escapedAssetRoot . '/icons/', $html);
         $html = str_replace('src="/assets/', 'src="' . $escapedAssetRoot . '/assets/', $html);
@@ -110,6 +176,58 @@ class DocumentController extends Controller {
         $html = str_replace('<script type="module"', '<script nonce="' . $escapedNonce . '" type="module"', $html);
 
         return $html;
+    }
+
+    private function saveBridgeScript(string $saveUrl, string $requestToken, string $safeFilename): string {
+        $saveUrlJson = json_encode($saveUrl, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $requestTokenJson = json_encode($requestToken, JSON_THROW_ON_ERROR);
+        $safeFilenameJson = json_encode($safeFilename, JSON_THROW_ON_ERROR);
+
+        return <<<JS
+(() => {
+    const saveUrl = {$saveUrlJson};
+    const requestToken = {$requestTokenJson};
+    const fileName = {$safeFilenameJson};
+
+    window.rhwpNextcloudSave = { saveUrl, fileName };
+    window.showSaveFilePicker = async () => ({
+        kind: 'file',
+        name: fileName,
+        async createWritable() {
+            const chunks = [];
+            return {
+                async write(chunk) {
+                    chunks.push(chunk);
+                },
+                async close() {
+                    const body = new Blob(chunks, { type: 'application/octet-stream' });
+                    const response = await fetch(saveUrl, {
+                        method: 'PUT',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/octet-stream',
+                            requesttoken: requestToken,
+                        },
+                        body,
+                    });
+                    if (!response.ok) {
+                        let message = 'HTTP ' + response.status;
+                        try {
+                            const payload = await response.json();
+                            message = payload.error || message;
+                        } catch (error) {
+                        }
+                        throw new Error(message);
+                    }
+                },
+                async abort() {
+                    chunks.length = 0;
+                },
+            };
+        },
+    });
+})();
+JS;
     }
 
     private function safeDocumentFilename(ResolvedFile $file): ?string {
