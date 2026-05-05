@@ -179,6 +179,8 @@ class DocumentController extends Controller {
     }
 
     private function saveBridgeScript(string $saveUrl, string $requestToken, string $safeFilename): string {
+        // HWPX save-back depends on upstream RHWP Studio enabling its save command.
+        // Current upstream disables HWPX save before it reaches showSaveFilePicker.
         $saveUrlJson = json_encode($saveUrl, JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
         $requestTokenJson = json_encode($requestToken, JSON_THROW_ON_ERROR);
         $safeFilenameJson = json_encode($safeFilename, JSON_THROW_ON_ERROR);
