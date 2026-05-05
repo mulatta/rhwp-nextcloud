@@ -115,6 +115,7 @@ class ConversionController extends Controller {
     private function statusForFailure(ConversionFailed $error): int {
         return match ($error->getReason()) {
             ConversionFailed::REASON_TIMEOUT => Http::STATUS_GATEWAY_TIMEOUT,
+            ConversionFailed::REASON_UNSUPPORTED_DOCUMENT => Http::STATUS_UNSUPPORTED_MEDIA_TYPE,
             ConversionFailed::REASON_NON_ZERO_EXIT,
             ConversionFailed::REASON_NO_OUTPUT => Http::STATUS_BAD_GATEWAY,
             default => Http::STATUS_INTERNAL_SERVER_ERROR,
@@ -125,6 +126,7 @@ class ConversionController extends Controller {
         return match ($error->getReason()) {
             ConversionFailed::REASON_TIMEOUT => 'Conversion timed out.',
             ConversionFailed::REASON_MISSING_EXECUTABLE => 'Conversion engine is unavailable.',
+            ConversionFailed::REASON_UNSUPPORTED_DOCUMENT => 'Unsupported document type.',
             default => 'Conversion failed.',
         };
     }

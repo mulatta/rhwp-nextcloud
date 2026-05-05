@@ -2,6 +2,7 @@
 
 let
   sampleHwp = ./fixtures/sample.hwp;
+  sampleHwpx = ./fixtures/sample.hwpx;
 in
 pkgs.testers.runNixOSTest (_: {
   name = "nextcloud-rhwpviewer";
@@ -58,15 +59,19 @@ pkgs.testers.runNixOSTest (_: {
         "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
     )
     sample_filename = "한글 제목 샘플.hwp"
+    sample_hwpx_filename = "한글 제목 샘플.hwpx"
     sample_dirname = "rhwpviewer-sample-dir"
     sample_path = f"/var/lib/nextcloud/data/root/files/{sample_filename}"
+    sample_hwpx_path = f"/var/lib/nextcloud/data/root/files/{sample_hwpx_filename}"
     sample_dir_path = f"/var/lib/nextcloud/data/root/files/{sample_dirname}"
     quoted_sample_path = shlex.quote(sample_path)
+    quoted_sample_hwpx_path = shlex.quote(sample_hwpx_path)
     quoted_sample_dir_path = shlex.quote(sample_dir_path)
     machine.succeed(textwrap.dedent(f"""
         install -d -o nextcloud -g nextcloud /var/lib/nextcloud/data/root/files
         install -d -o nextcloud -g nextcloud {quoted_sample_dir_path}
         install -o nextcloud -g nextcloud -m 0640 ${sampleHwp} {quoted_sample_path}
+        install -o nextcloud -g nextcloud -m 0640 ${sampleHwpx} {quoted_sample_hwpx_path}
         nextcloud-occ files:scan root
     """))
 
@@ -84,6 +89,7 @@ pkgs.testers.runNixOSTest (_: {
         base = "http://localhost"
         password = "CorrectHorseBatteryStaple42!"
         sample_filename = "한글 제목 샘플.hwp"
+        sample_hwpx_filename = "한글 제목 샘플.hwpx"
         sample_dirname = "rhwpviewer-sample-dir"
         cookies = http.cookiejar.CookieJar()
         opener = urllib.request.build_opener(
@@ -148,16 +154,43 @@ pkgs.testers.runNixOSTest (_: {
         assert "viewer.js" in html, html[:1000]
         assert "Viewer route is ready" in html, html[:1000]
 
-        file_id = get_file_id(sample_filename)
-        response = opener.open(base + f"/apps/rhwpviewer/view/{file_id}")
-        assert response.status == 200, response.status
-        html = response.read().decode("utf-8", "replace")
-        assert "rhwpviewer-root" in html, html[:1000]
-        assert "rhwpviewer-pages" in html, html[:1000]
-        assert "viewer.js" in html, html[:1000]
-        assert f'data-file-id="{file_id}"' in html, html[:1000]
-        assert file_id in html, html[:1000]
-        assert sample_filename in html, html[:1000]
+        def check_svg_export(filename):
+            file_id = get_file_id(filename)
+            response = opener.open(base + f"/apps/rhwpviewer/view/{file_id}")
+            assert response.status == 200, response.status
+            html = response.read().decode("utf-8", "replace")
+            assert "rhwpviewer-root" in html, html[:1000]
+            assert "rhwpviewer-pages" in html, html[:1000]
+            assert "viewer.js" in html, html[:1000]
+            assert f'data-file-id="{file_id}"' in html, html[:1000]
+            assert file_id in html, html[:1000]
+            assert filename in html, html[:1000]
+
+            response = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/convert")
+            assert response.status == 200, response.status
+            payload = json.loads(response.read().decode("utf-8", "replace"))
+            assert payload["fileId"] == int(file_id), payload
+            assert payload["fileName"] == filename, payload
+            assert payload["status"] == "ok", payload
+            assert payload["kind"] == "svg", payload
+            assert isinstance(payload["pages"], list) and len(payload["pages"]) >= 1, payload
+            first_page = payload["pages"][0]
+            assert first_page["index"] == 0, payload
+            assert isinstance(first_page["bytes"], int) and first_page["bytes"] > 0, payload
+            assert first_page["url"].startswith(f"/apps/rhwpviewer/api/files/{file_id}/pages/"), payload
+            assert first_page["url"].endswith(".svg"), payload
+            assert filename not in first_page["url"], payload
+            assert "한글" not in first_page["url"], payload
+
+            page_response = opener.open(base + first_page["url"])
+            assert page_response.status == 200, page_response.status
+            assert page_response.headers.get_content_type() == "image/svg+xml", page_response.headers
+            svg = page_response.read().decode("utf-8", "replace")
+            assert "<svg" in svg[:1000], svg[:1000]
+            return file_id
+
+        file_id = check_svg_export(sample_filename)
+        check_svg_export(sample_hwpx_filename)
 
         directory_id = get_file_id(sample_dirname)
         try:
@@ -165,28 +198,6 @@ pkgs.testers.runNixOSTest (_: {
             raise AssertionError("directory fileId unexpectedly succeeded")
         except urllib.error.HTTPError as error:
             assert error.code == 404, error.code
-
-        response = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/convert")
-        assert response.status == 200, response.status
-        payload = json.loads(response.read().decode("utf-8", "replace"))
-        assert payload["fileId"] == int(file_id), payload
-        assert payload["fileName"] == sample_filename, payload
-        assert payload["status"] == "ok", payload
-        assert payload["kind"] == "svg", payload
-        assert isinstance(payload["pages"], list) and len(payload["pages"]) >= 1, payload
-        first_page = payload["pages"][0]
-        assert first_page["index"] == 0, payload
-        assert isinstance(first_page["bytes"], int) and first_page["bytes"] > 0, payload
-        assert first_page["url"].startswith(f"/apps/rhwpviewer/api/files/{file_id}/pages/"), payload
-        assert first_page["url"].endswith(".svg"), payload
-        assert sample_filename not in first_page["url"], payload
-        assert "한글" not in first_page["url"], payload
-
-        page_response = opener.open(base + first_page["url"])
-        assert page_response.status == 200, page_response.status
-        assert page_response.headers.get_content_type() == "image/svg+xml", page_response.headers
-        svg = page_response.read().decode("utf-8", "replace")
-        assert "<svg" in svg[:1000], svg[:1000]
 
         try:
             opener.open(base + "/apps/rhwpviewer/view/999999999")

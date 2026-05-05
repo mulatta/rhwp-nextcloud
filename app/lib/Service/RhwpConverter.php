@@ -21,7 +21,8 @@ final class RhwpConverter {
     public function exportSvg(ResolvedFile $file): SvgExportResult {
         $workDir = $this->createWorkDir();
         $outputDir = $workDir . DIRECTORY_SEPARATOR . 'output';
-        $inputPath = $workDir . DIRECTORY_SEPARATOR . 'input.hwp';
+        $inputName = 'input' . $this->documentSuffix($file);
+        $inputPath = $workDir . DIRECTORY_SEPARATOR . $inputName;
 
         try {
             if (!mkdir($outputDir, 0700)) {
@@ -31,7 +32,7 @@ final class RhwpConverter {
             $this->copyInputFile($file, $inputPath);
 
             $result = $this->run(
-                [$this->getCliPath(), 'export-svg', 'input.hwp', '-o', 'output/'],
+                [$this->getCliPath(), 'export-svg', $inputName, '-o', 'output/'],
                 $workDir,
             );
 
@@ -48,6 +49,19 @@ final class RhwpConverter {
             $this->removeTree($workDir);
             throw ConversionFailed::executionError('Failed to export SVG pages.', $throwable);
         }
+    }
+
+    /**
+     * @throws ConversionFailed
+     */
+    private function documentSuffix(ResolvedFile $file): string {
+        $extension = strtolower(pathinfo($file->getName(), PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'hwp' => '.hwp',
+            'hwpx' => '.hwpx',
+            default => throw ConversionFailed::unsupportedDocument($file->getName()),
+        };
     }
 
     /**
