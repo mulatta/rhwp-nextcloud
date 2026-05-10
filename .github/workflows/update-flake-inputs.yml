@@ -30,5 +30,4 @@ jobs:
         uses: Mic92/update-flake-inputs@main
         with:
           github-token: ${{ steps.app-token.outputs.token }}
-          auto-merge: true
-          auto-merge-method: SQUASH
+          auto-merge: false
