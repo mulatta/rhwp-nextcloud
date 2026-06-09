@@ -68,11 +68,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1780860093,
-        "narHash": "sha256-p223iAYf0+9mrxksrJAuxpDwOiqlhtdOk2a6mQDAMWU=",
+        "lastModified": 1780949895,
+        "narHash": "sha256-mwBj2N4koIujigvvXo/vd592jVnFeEYeXnNdlqCVNaM=",
         "owner": "mulatta",
         "repo": "rhwp-nix",
-        "rev": "308374a7c59983fea362742d46e51ca2b1caade0",
+        "rev": "43265acf60b058cc768d32cf7f30e29d395b5cfe",
         "type": "github"
       },
       "original": {
@@ -84,11 +84,11 @@
     "rhwp-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1780757004,
-        "narHash": "sha256-8QQVpFil3crr7D/zgUVUz7rvoEN6TRFQSrgR5360EPU=",
+        "lastModified": 1780932548,
+        "narHash": "sha256-lkSlIusb4QiEsNrsTqY5XZdotZ5YlkwEPulp2iV+2+s=",
         "owner": "edwardkim",
         "repo": "rhwp",
-        "rev": "aa925a5954f0fd26dfcef2166cbce7877c481f44",
+        "rev": "bc38ff55a7e8acb65aebebe237dca0542480d381",
         "type": "github"
       },
       "original": {
@@ -113,11 +113,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1780802404,
-        "narHash": "sha256-bGtIUeLb0yChX4h6hB40OOCwcYhcpQZHXSDvZGdWgeM=",
+        "lastModified": 1780888890,
+        "narHash": "sha256-MUQPFiskEENaJ2N82TRIqpKlHXGXJJkPfKH6W788oQo=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "8e596a8430f2ce54d55c742198187d6945a5501e",
+        "rev": "7d5f8d75fc195a236b46633d7679139698aeb35f",
         "type": "github"
       },
       "original": {
