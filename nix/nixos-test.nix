@@ -211,10 +211,22 @@ pkgs.testers.runNixOSTest (_: {
             assert save_payload["bytes"] == len(content), save_payload
             saved_content = opener.open(base + f"/apps/rhwpviewer/api/files/{file_id}/content").read()
             assert saved_content == content, len(saved_content)
-            script_match = re.search(r'<script\b([^>]+)src="([^"]+)"', studio_html)
-            assert script_match, studio_html[:1000]
-            assert "nonce=" in script_match.group(1), script_match.group(0)
-            script_src = script_match.group(2)
+            # theme-init.js: nonced and moved off the document root onto the app
+            # subpath, so it loads under Nextcloud and passes the CSP.
+            assert 'src="/theme-init.js"' not in studio_html, studio_html[:1000]
+            theme_match = re.search(
+                r'<script\b([^>]*)src="(/nix-apps/rhwpviewer/js/theme-init\.js)"', studio_html
+            )
+            assert theme_match, studio_html[:1000]
+            assert "nonce=" in theme_match.group(1), theme_match.group(0)
+            # The app bundle is the ES module script; check it specifically rather
+            # than the first <script src> (which is now theme-init.js).
+            module_match = re.search(
+                r'<script\b([^>]*\btype="module"[^>]*)src="([^"]+)"', studio_html
+            )
+            assert module_match, studio_html[:1000]
+            assert "nonce=" in module_match.group(1), module_match.group(0)
+            script_src = module_match.group(2)
             assert script_src.startswith("/nix-apps/rhwpviewer/js/assets/"), studio_html[:1000]
             assert 'src="/assets/' not in studio_html, studio_html[:1000]
             assert 'href="/assets/' not in studio_html, studio_html[:1000]
