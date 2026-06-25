@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Bumps flake.lock inputs (rhwp-nix, nixpkgs, treefmt-nix, flake-parts) to
+  # their latest upstream commits. No vendored-hash fixup is needed: this app's
+  # only npmDepsHash is derived from its own package-lock.json, not from a flake
+  # input, so flake bumps leave it valid.
+  - package-ecosystem: "nix"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  # Keeps the workflow actions (checkout, create-github-app-token, ...) current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
