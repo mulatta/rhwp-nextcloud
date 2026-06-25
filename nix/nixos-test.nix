@@ -231,6 +231,15 @@ pkgs.testers.runNixOSTest (_: {
             assert 'src="/assets/' not in studio_html, studio_html[:1000]
             assert 'href="/assets/' not in studio_html, studio_html[:1000]
             assert "registerSW.js" not in studio_html, studio_html[:1000]
+            # Catch-all guards so a future RHWP Studio <head> change fails loudly
+            # and points at exactly what studioHtml() must handle, rather than
+            # tripping an indirect assertion. (1) no root-absolute asset ref may
+            # survive un-rewritten off the app subpath; (2) every <script src>
+            # must carry the CSP nonce.
+            stray = re.search(r'\b(?:src|href)="/(?!nix-apps/)[^"]*"', studio_html)
+            assert stray is None, stray.group(0) if stray else studio_html[:1000]
+            for tag in re.findall(r'<script\b[^>]*\bsrc="[^>]*>', studio_html):
+                assert "nonce=" in tag, tag
 
             asset_response = opener.open(base + script_src)
             assert asset_response.status == 200, asset_response.status
