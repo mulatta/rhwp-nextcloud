@@ -1,6 +1,6 @@
 # RHWP Studio for Nextcloud
 
-Nextcloud 33 app for opening Hangul Word Processor documents (`.hwp` / `.hwpx`) from the Files app with RHWP Studio.
+Nextcloud 33/34 app for opening Hangul Word Processor documents (`.hwp` / `.hwpx`) from the Files app with RHWP Studio.
 
 The app packages RHWP Studio and the `rhwp` CLI with Nix, registers a Nextcloud Files action, and exposes authenticated AppFramework endpoints for document loading, SVG preview export, and save-back.
 

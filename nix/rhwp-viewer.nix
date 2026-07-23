@@ -85,7 +85,7 @@ stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Nextcloud 33 app: open and edit HWP/HWPX files via rhwp WASM";
+    description = "Nextcloud 33/34 app: open and edit HWP/HWPX files via rhwp WASM";
     license = lib.licenses.mit;
   };
 }

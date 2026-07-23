@@ -14,6 +14,6 @@
     <bugs>https://github.com/mulatta/rhwp-nextcloud/issues</bugs>
     <repository type="git">https://github.com/mulatta/rhwp-nextcloud.git</repository>
     <dependencies>
-        <nextcloud min-version="33" max-version="33"/>
+        <nextcloud min-version="33" max-version="34"/>
     </dependencies>
 </info>
