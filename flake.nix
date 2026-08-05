@@ -2,8 +2,6 @@
   description = "rhwp-nextcloud";
 
   inputs = {
-    flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
-    flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rhwp-nix.inputs.nixpkgs.follows = "nixpkgs";
     rhwp-nix.url = "github:mulatta/rhwp.nix";
@@ -12,58 +10,71 @@
   };
 
   outputs =
-    inputs@{ self, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
+    inputs@{ self, nixpkgs, ... }:
+    let
       systems = [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-
-      imports = [ inputs.treefmt-nix.flakeModule ];
-
-      flake.nixosConfigurations.test = inputs.nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = { inherit self; };
-        modules = [ ./nix/test-vm.nix ];
-      };
-
-      perSystem =
-        { pkgs, system, ... }:
+      forAllSystems = nixpkgs.lib.genAttrs systems;
+      pkgsFor = forAllSystems (
+        system:
+        import nixpkgs {
+          inherit system;
+          config.allowUnfree = true;
+        }
+      );
+    in
+    {
+      packages = forAllSystems (
+        system:
         let
+          pkgs = pkgsFor.${system};
           rhwpPkgs = inputs.rhwp-nix.packages.${system};
           rhwp-viewer = pkgs.callPackage ./nix/rhwp-viewer.nix {
             inherit (rhwpPkgs) rhwp-studio rhwp-cli;
           };
         in
         {
-          _module.args.pkgs = import inputs.nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
+          inherit rhwp-viewer;
+          default = rhwp-viewer;
+        }
+      );
 
-          packages = {
-            inherit rhwp-viewer;
-            default = rhwp-viewer;
+      checks = forAllSystems (
+        system:
+        nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
+          nextcloud = import ./nix/nixos-test.nix {
+            inherit self;
+            pkgs = pkgsFor.${system};
           };
+        }
+      );
 
-          checks = pkgs.lib.optionalAttrs (system == "x86_64-linux") {
-            nextcloud = import ./nix/nixos-test.nix { inherit self pkgs; };
+      devShells = forAllSystems (system: {
+        default = pkgsFor.${system}.mkShell { packages = [ ]; };
+      });
+
+      formatter = forAllSystems (
+        system:
+        (inputs.treefmt-nix.lib.evalModule pkgsFor.${system} {
+          projectRootFile = "flake.nix";
+          programs = {
+            deadnix.enable = true;
+            nixfmt.enable = true;
+            php-cs-fixer.enable = true;
+            prettier.enable = true;
+            statix.enable = true;
+            xmllint.enable = true;
           };
+        }).config.build.wrapper
+      );
 
-          devShells.default = pkgs.mkShell { packages = [ ]; };
-
-          treefmt = {
-            projectRootFile = "flake.nix";
-            programs = {
-              deadnix.enable = true;
-              nixfmt.enable = true;
-              php-cs-fixer.enable = true;
-              prettier.enable = true;
-              statix.enable = true;
-              xmllint.enable = true;
-            };
-          };
-        };
+      nixosConfigurations.test = nixpkgs.lib.nixosSystem {
+        system = "x86_64-linux";
+        specialArgs = { inherit self; };
+        modules = [ ./nix/test-vm.nix ];
+      };
     };
 }
