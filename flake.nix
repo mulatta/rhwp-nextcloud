@@ -7,7 +7,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rhwp-nix.inputs.nixpkgs.follows = "nixpkgs";
-    rhwp-nix.url = "github:mulatta/rhwp-nix";
+    rhwp-nix.url = "github:mulatta/rhwp.nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
     # keep-sorted end
