@@ -2,7 +2,6 @@
   description = "rhwp-nextcloud";
 
   inputs = {
-    # keep-sorted start
     flake-parts.inputs.nixpkgs-lib.follows = "nixpkgs";
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -10,7 +9,6 @@
     rhwp-nix.url = "github:mulatta/rhwp.nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
     treefmt-nix.url = "github:numtide/treefmt-nix";
-    # keep-sorted end
   };
 
   outputs =
@@ -58,12 +56,12 @@
           treefmt = {
             projectRootFile = "flake.nix";
             programs = {
-              # keep-sorted start
               deadnix.enable = true;
-              keep-sorted.enable = true;
               nixfmt.enable = true;
+              php-cs-fixer.enable = true;
+              prettier.enable = true;
               statix.enable = true;
-              # keep-sorted end
+              xmllint.enable = true;
             };
           };
         };
