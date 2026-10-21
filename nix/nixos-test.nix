@@ -1,11 +1,15 @@
-{ self, pkgs }:
+{
+  self,
+  pkgs,
+  nextcloud,
+}:
 
 let
   sampleHwp = ./fixtures/sample.hwp;
   sampleHwpx = ./fixtures/sample.hwpx;
 in
 pkgs.testers.runNixOSTest (_: {
-  name = "nextcloud-rhwpviewer";
+  name = "nextcloud${pkgs.lib.versions.major nextcloud.version}-rhwpviewer";
 
   node.specialArgs = { inherit self; };
 
@@ -13,6 +17,7 @@ pkgs.testers.runNixOSTest (_: {
     { pkgs, ... }:
     {
       imports = [ ./nextcloud-node.nix ];
+      services.nextcloud.package = nextcloud;
 
       environment.systemPackages = with pkgs; [
         curl

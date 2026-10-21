@@ -1,8 +1,13 @@
-{ self, pkgs, ... }:
+{
+  self,
+  pkgs,
+  lib,
+  ...
+}:
 {
   services.nextcloud = {
     enable = true;
-    package = pkgs.nextcloud33;
+    package = lib.mkDefault pkgs.nextcloud33;
     hostName = "localhost";
     config = {
       adminpassFile = toString (pkgs.writeText "adminpass" "admin");

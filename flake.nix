@@ -44,12 +44,17 @@
 
       checks = forAllSystems (
         system:
-        nixpkgs.lib.optionalAttrs (system == "x86_64-linux") {
-          nextcloud = import ./nix/nixos-test.nix {
-            inherit self;
-            pkgs = pkgsFor.${system};
-          };
-        }
+        nixpkgs.lib.optionalAttrs (system == "x86_64-linux") (
+          # Oldest and newest supported releases, matching info.xml.
+          nixpkgs.lib.genAttrs [ "nextcloud33" "nextcloud35" ] (
+            name:
+            import ./nix/nixos-test.nix {
+              inherit self;
+              pkgs = pkgsFor.${system};
+              nextcloud = pkgsFor.${system}.${name};
+            }
+          )
+        )
       );
 
       devShells = forAllSystems (system: {
