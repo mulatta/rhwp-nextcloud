@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace OCA\RhwpViewer\Controller;
 
+use OC\Security\CSP\ContentSecurityPolicyNonceManager;
+use OC\Security\CSRF\CsrfTokenManager;
 use OCA\RhwpViewer\AppInfo\Application;
 use OCA\RhwpViewer\Service\FileResolver;
 use OCA\RhwpViewer\Service\ResolvedFile;
@@ -23,6 +25,9 @@ class DocumentController extends Controller {
         IRequest $request,
         private FileResolver $fileResolver,
         private IURLGenerator $urlGenerator,
+        // No public API exposes these; the \OC::$server getters are gone in Nextcloud 35.
+        private ContentSecurityPolicyNonceManager $nonceManager,
+        private CsrfTokenManager $csrfTokenManager,
     ) {
         parent::__construct(Application::APP_ID, $request);
     }
@@ -158,12 +163,12 @@ class DocumentController extends Controller {
 
         $assetRoot = rtrim($this->urlGenerator->linkTo(Application::APP_ID, 'js'), '/');
         $escapedAssetRoot = htmlspecialchars($assetRoot, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $nonce = \OC::$server->getContentSecurityPolicyNonceManager()->getNonce();
+        $nonce = $this->nonceManager->getNonce();
         $escapedNonce = htmlspecialchars($nonce, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $saveUrl = $this->urlGenerator->linkToRoute('rhwpviewer.document.saveContent', [
             'fileId' => $file->getId(),
         ]);
-        $requestToken = \OC::$server->getCsrfTokenManager()->getToken()->getEncryptedValue();
+        $requestToken = $this->csrfTokenManager->getToken()->getEncryptedValue();
         $safeFilename = $this->safeDocumentFilename($file) ?? 'document.hwp';
         $saveBridge = $this->saveBridgeScript($saveUrl, $requestToken, $safeFilename);
 
