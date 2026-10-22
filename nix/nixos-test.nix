@@ -224,6 +224,15 @@ pkgs.testers.runNixOSTest (_: {
             )
             assert theme_match, studio_html[:1000]
             assert "nonce=" in theme_match.group(1), theme_match.group(0)
+            locale_match = re.search(
+                r'<script\b([^>]*)src="(/nix-apps/rhwpviewer/js/locale-init\.js)"', studio_html
+            )
+            assert locale_match, studio_html[:1000]
+            assert "nonce=" in locale_match.group(1), locale_match.group(0)
+            locale_response = opener.open(base + locale_match.group(2))
+            assert locale_response.status == 200, locale_response.status
+            assert locale_response.headers.get_content_type() == "text/javascript", locale_response.headers
+            assert locale_response.read(), "locale-init.js is empty"
             # The app bundle is the ES module script; check it specifically rather
             # than the first <script src> (which is now theme-init.js).
             module_match = re.search(

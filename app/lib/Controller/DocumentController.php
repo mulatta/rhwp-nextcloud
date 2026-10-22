@@ -179,10 +179,11 @@ class DocumentController extends Controller {
         $html = str_replace('src="/assets/', 'src="' . $escapedAssetRoot . '/assets/', $html);
         $html = str_replace('href="/assets/', 'href="' . $escapedAssetRoot . '/assets/', $html);
         $html = str_replace('<script type="module"', '<script nonce="' . $escapedNonce . '" type="module"', $html);
-        // RHWP Studio emits an early <script src="/theme-init.js"> at the document
-        // root with no nonce. <base> cannot relocate a root-absolute src, so
-        // rewrite it onto the app subpath and nonce it for the CSP.
-        $html = str_replace('<script src="/theme-init.js"', '<script nonce="' . $escapedNonce . '" src="' . $escapedAssetRoot . '/theme-init.js"', $html);
+        // <base> cannot relocate root-absolute initialization scripts, and
+        // Nextcloud's CSP requires a nonce on each script.
+        foreach (['theme-init.js', 'locale-init.js'] as $script) {
+            $html = str_replace('<script src="/' . $script . '"', '<script nonce="' . $escapedNonce . '" src="' . $escapedAssetRoot . '/' . $script . '"', $html);
+        }
 
         return $html;
     }
