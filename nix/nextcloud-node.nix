@@ -10,7 +10,6 @@
     package = lib.mkDefault pkgs.nextcloud33;
     hostName = "localhost";
     config = {
-      adminpassFile = toString (pkgs.writeText "adminpass" "admin");
       dbtype = "sqlite";
     };
     # Map appid -> derivation. linkFarm exposes $out at nix-apps/rhwpviewer.

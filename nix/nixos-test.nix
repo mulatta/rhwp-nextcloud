@@ -65,7 +65,7 @@ pkgs.testers.runNixOSTest (_: {
     machine.succeed(f"test -f {quoted_app_path}/js/viewer.js")
     machine.succeed(f"test -f {quoted_app_path}/js/files-action.js")
     machine.succeed(
-        "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:resetpassword --password-from-env root"
+        "OC_PASS='CorrectHorseBatteryStaple42!' nextcloud-occ user:add --password-from-env --group admin root"
     )
     sample_filename = "한글 제목 샘플.hwp"
     sample_hwpx_filename = "한글 제목 샘플.hwpx"
