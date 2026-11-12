@@ -25,11 +25,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1793257072,
-        "narHash": "sha256-jtBaS+j7rWqvNctYC/MB7ZPTFmepGNwxTypq5/eT/6o=",
+        "lastModified": 1794245504,
+        "narHash": "sha256-uJeYXDPT81aWkDViQoM3qxMVyRUVIMZNlrmLV++jn3Q=",
         "owner": "mulatta",
         "repo": "rhwp.nix",
-        "rev": "10b359b8ed91497b04979bf3cc7a995f0a4a407b",
+        "rev": "8c603f24d0daf987b105559c64c5f605e23dbfeb",
         "type": "github"
       },
       "original": {
@@ -53,11 +53,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1792913333,
-        "narHash": "sha256-wjoZGhxH/Yr+OsFRpNyV9DpMGQIdNEjjAOinfzQvadk=",
+        "lastModified": 1793523538,
+        "narHash": "sha256-vHPjEGxtV+StSLW9DJpa3c3gt0UD0s1q4nC98AZ0N0c=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "fad80eb74614f7dc37c1c83df8caae64361eda22",
+        "rev": "c85ccd343087c57da6021cafa1647142ad03e32e",
         "type": "github"
       },
       "original": {
